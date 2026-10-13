@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "anvil_unbound",
+  "version": "${version}",
+  "name": "Anvil Unbound",
+  "description": "解除铁砧合并同名附魔的等级上限：锋利 V + 锋利 V = 锋利 VI，一直合并到配置的上限（默认 1000）。附魔互斥规则保持原版不变。",
+  "authors": [
+    "forever3371"
+  ],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.example.anvilunbound.AnvilUnbound"
+    ]
+  },
+  "mixins": [
+    "anvil_unbound.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

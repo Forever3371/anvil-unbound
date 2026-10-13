@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "anvil-unbound-test",
+  "version": "1.0.0",
+  "name": "Anvil Unbound Game Tests",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-gametest": [
+      "com.example.anvilunbound.test.AnvilUnboundGameTest"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "fabric-api": "*",
+    "anvil_unbound": "*"
+  }
+}

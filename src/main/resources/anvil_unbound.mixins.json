@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.example.anvilunbound.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "com.example.anvilunbound.mixin.AnvilUnboundMixinPlugin",
+  "mixins": [
+    "AnvilScreenHandlerMixin",
+    "EnchantmentLevelCapBuilderMixin",
+    "EnchantmentLevelCapCodecMixin",
+    "EnchantmentLevelCapInitMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
