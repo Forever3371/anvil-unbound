@@ -3,7 +3,7 @@
   "id": "anvil_unbound",
   "version": "${version}",
   "name": "Anvil Unbound",
-  "description": "解除铁砧合并同名附魔的等级上限：锋利 V + 锋利 V = 锋利 VI，一直合并到配置的上限（默认 1000）。附魔互斥规则保持原版不变。",
+  "description": "铁砧改造：解除合并等级上限（锋利 V + 锋利 V = 锋利 VI，最高可到配置的 1000）、解除大部分附魔互斥（保留靴子与三叉戟两组），并把经验花费改成消耗一颗下界之星，铁砧界面新增专用槽位。",
   "authors": [
     "forever3371"
   ],
