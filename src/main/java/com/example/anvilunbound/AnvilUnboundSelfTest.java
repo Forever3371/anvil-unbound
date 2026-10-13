@@ -122,53 +122,55 @@ public final class AnvilUnboundSelfTest {
     }
 
     /**
-     * 2. 互斥规则必须和原版一致。
-     * 本模组只该放宽"等级上限"，一旦这里失败，说明改动误伤了互斥逻辑。
+     * 2. 互斥规则：该解除的已经解除、该保留的仍然保留。
+     * 这里判断用的是铁砧实际调用的那套规则（{@link AnvilUnboundRules#canCombine}），
+     * 所以验证的就是玩家在铁砧里真正会看到的行为。
      */
     private static Result exclusivityCheck(ServerWorld world) {
         String name = "附魔互斥规则";
         try {
             Registry<Enchantment> registry = world.getRegistryManager().get(RegistryKeys.ENCHANTMENT);
-            // {附魔A, 附魔B, 是否应当互斥}
+            // {附魔A, 附魔B, 合并时是否应当仍被互斥拦住}
             Object[][] pairs = {
-                    {"sharpness", "smite", true},
-                    {"sharpness", "bane_of_arthropods", true},
-                    {"smite", "bane_of_arthropods", true},
-                    {"protection", "fire_protection", true},
-                    {"protection", "blast_protection", true},
-                    {"protection", "projectile_protection", true},
+                    // --- 已解除：这些现在都能共存 ---
+                    {"sharpness", "smite", false},
+                    {"sharpness", "bane_of_arthropods", false},
+                    {"smite", "bane_of_arthropods", false},
+                    {"protection", "fire_protection", false},
+                    {"protection", "blast_protection", false},
+                    {"protection", "projectile_protection", false},
+                    {"silk_touch", "fortune", false},
+                    {"infinity", "mending", false},
+                    {"multishot", "piercing", false},
+                    // --- 按需求保留互斥 ---
                     {"frost_walker", "depth_strider", true},
                     {"riptide", "loyalty", true},
                     {"riptide", "channeling", true},
+                    // --- 原版本来就能共存，别被误伤 ---
                     {"loyalty", "channeling", false},
-                    {"infinity", "mending", true},
-                    {"multishot", "piercing", true},
-                    {"silk_touch", "fortune", true},
-                    // canBeCombined 问的是"两个附魔能否共存"，同一个附魔原版也返回 false
-                    {"sharpness", "sharpness", true},
             };
 
             List<String> broken = new ArrayList<>();
             for (Object[] pair : pairs) {
                 String a = (String) pair[0];
                 String b = (String) pair[1];
-                boolean shouldBeExclusive = (Boolean) pair[2];
+                boolean shouldBeBlocked = (Boolean) pair[2];
                 Enchantment first = registry.get(Identifier.ofVanilla(a));
                 Enchantment second = registry.get(Identifier.ofVanilla(b));
                 if (first == null || second == null) {
                     broken.add(a + "/" + b + " 不存在");
                     continue;
                 }
-                boolean exclusive = !Enchantment.canBeCombined(registry.getEntry(first), registry.getEntry(second));
-                if (exclusive != shouldBeExclusive) {
-                    broken.add(a + " vs " + b + " 期望" + (shouldBeExclusive ? "互斥" : "可共存")
-                            + "、实际" + (exclusive ? "互斥" : "可共存"));
+                boolean blocked = !AnvilUnboundRules.canCombine(registry.getEntry(first), registry.getEntry(second));
+                if (blocked != shouldBeBlocked) {
+                    broken.add(a + " vs " + b + " 期望" + (shouldBeBlocked ? "互斥" : "可共存")
+                            + "、实际" + (blocked ? "互斥" : "可共存"));
                 }
             }
             if (!broken.isEmpty()) {
                 return new Result(name, false, String.join("；", broken));
             }
-            return new Result(name, true, "抽查 " + pairs.length + " 组关系，全部与原版一致（互斥未被解除）");
+            return new Result(name, true, "抽查 " + pairs.length + " 组：该解除的已解除，靴子与三叉戟两组仍保留互斥");
         } catch (Exception e) {
             return new Result(name, false, "抛出异常：" + e);
         }

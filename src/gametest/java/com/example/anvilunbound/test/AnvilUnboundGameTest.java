@@ -1,32 +1,35 @@
 package com.example.anvilunbound.test;
 
 import com.example.anvilunbound.AnvilUnboundConfig;
+import com.example.anvilunbound.NetherStarSlot;
+import com.example.anvilunbound.mixin.AnvilScreenHandlerInvoker;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.enchantment.Enchantment;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.screen.AnvilScreenHandler;
 import net.minecraft.screen.ScreenHandlerContext;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.test.GameTest;
 import net.minecraft.test.TestContext;
 import net.minecraft.util.Identifier;
 
 /**
- * 自动化测试：在无头服务端里真的构造一个铁砧界面，把两件装备放进去合并，检查产物等级。
+ * 自动化测试：在无头服务端里真的构造一个铁砧界面，把装备与下界之星放进去，检查结果。
  * 运行：./gradlew runGameTest
  */
 public class AnvilUnboundGameTest implements FabricGameTest {
 
-    // ---------- 合并等级：本模组要改的就是这一块 ----------
+    // ---------------------------------------------------------- 合并等级上限
 
     /** 锋利 V + 锋利 V 应该变成 VI（原版会夹回 V） */
     @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
@@ -65,7 +68,7 @@ public class AnvilUnboundGameTest implements FabricGameTest {
         context.complete();
     }
 
-    /** 其它物品类型也同样能突破原版上限（靴子、弓、三叉戟、盔甲） */
+    /** 其它物品类型也同样能突破原版上限 */
     @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
     public void otherItemTypesCanAlsoExceedVanillaCap(TestContext context) {
         AnvilScreenHandler handler = newAnvil(context);
@@ -77,9 +80,6 @@ public class AnvilUnboundGameTest implements FabricGameTest {
 
         int trident = merge(context, handler, Items.TRIDENT, "impaling", 5, "impaling", 5, "impaling");
         context.assertTrue(trident == 6, "三叉戟 穿刺 V + V 应当是 VI，实际 " + trident);
-
-        int chest = merge(context, handler, Items.DIAMOND_CHESTPLATE, "protection", 4, "protection", 4, "protection");
-        context.assertTrue(chest == 5, "胸甲 保护 IV + IV 应当是 V，实际 " + chest);
         context.complete();
     }
 
@@ -100,42 +100,11 @@ public class AnvilUnboundGameTest implements FabricGameTest {
         context.complete();
     }
 
-    // ---------- 互斥规则：本模组不该动这一块 ----------
+    // ---------------------------------------------------------- 互斥：该解除的已解除
 
-    /**
-     * 直接断言原版的互斥规则仍然成立。
-     * {@code Enchantment.canBeCombined} 就是铁砧判断"两个附魔能不能共存"用的函数，
-     * 比绕一圈去合并物品更直接、也不受合并流程细节影响。
-     */
+    /** 剑：锋利 + 亡灵杀手 现在应该能共存（原版互斥） */
     @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
-    public void vanillaExclusivityIsUntouched(TestContext context) {
-        ServerWorld world = context.getWorld();
-        // 需求里点名要保留的两组
-        assertExclusive(context, world, "frost_walker", "depth_strider", true, "靴子：冰霜行者 vs 深海探索者");
-        assertExclusive(context, world, "riptide", "loyalty", true, "三叉戟：激流 vs 忠诚");
-        assertExclusive(context, world, "riptide", "channeling", true, "三叉戟：激流 vs 引雷");
-        assertExclusive(context, world, "loyalty", "channeling", false, "三叉戟：忠诚与引雷本就可以共存");
-        // 其余原版互斥组
-        assertExclusive(context, world, "sharpness", "smite", true, "剑：锋利 vs 亡灵杀手");
-        assertExclusive(context, world, "sharpness", "bane_of_arthropods", true, "剑：锋利 vs 节肢杀手");
-        assertExclusive(context, world, "protection", "fire_protection", true, "盔甲：保护 vs 火焰保护");
-        assertExclusive(context, world, "protection", "blast_protection", true, "盔甲：保护 vs 爆炸保护");
-        assertExclusive(context, world, "infinity", "mending", true, "弓：无限 vs 经验修补");
-        assertExclusive(context, world, "multishot", "piercing", true, "弩：多重射击 vs 穿透");
-        assertExclusive(context, world, "silk_touch", "fortune", true, "工具：精准采集 vs 时运");
-        // 注意 canBeCombined 问的是"两个附魔能否共存"，同一个附魔谈不上共存，原版也返回 false
-        assertExclusive(context, world, "sharpness", "sharpness", true, "锋利与自己（原版语义即不可共存）");
-        context.complete();
-    }
-
-    /**
-     * 剑：互斥的附魔不会被合进结果。
-     * 场景特意选成"有其它可以合并的附魔"（抢夺 III+III → IV），
-     * 这样铁砧一定会有产出；否则两件满耐久又完全互斥的装备在原版里会被判定为"没有有效操作"，
-     * 输出槽直接是空的，断言就没法做了。
-     */
-    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
-    public void exclusiveEnchantmentIsNotMergedIn(TestContext context) {
+    public void weaponDamageEnchantmentsNowCombine(TestContext context) {
         ServerWorld world = context.getWorld();
         AnvilScreenHandler handler = newAnvil(context);
         put(handler, AnvilScreenHandler.INPUT_1_ID,
@@ -146,29 +115,140 @@ public class AnvilUnboundGameTest implements FabricGameTest {
 
         ItemStack output = take(handler, AnvilScreenHandler.OUTPUT_ID);
         context.assertTrue(!output.isEmpty(), "剑合并没有产出：" + describe(handler));
+        int sharpness = levelOf(world, output, "sharpness");
         int smite = levelOf(world, output, "smite");
-        context.assertTrue(smite == 0, "锋利与亡灵杀手应当互斥，结果不该出现亡灵杀手 " + smite + " 级：" + output);
-        int looting = levelOf(world, output, "looting");
-        context.assertTrue(looting == 4, "抢夺 III + III 应当合并为 IV，实际 " + looting);
+        context.assertTrue(sharpness == 5 && smite == 5,
+                "锋利与亡灵杀手现在应当能共存，实际 锋利=" + sharpness + " 亡灵杀手=" + smite);
         context.complete();
     }
 
-    // ---------- 辅助方法 ----------
+    /** 盔甲：四种保护现在应该能共存（原版互斥） */
+    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+    public void protectionEnchantmentsNowCombine(TestContext context) {
+        ServerWorld world = context.getWorld();
+        AnvilScreenHandler handler = newAnvil(context);
+        put(handler, AnvilScreenHandler.INPUT_1_ID,
+                enchantedItem(world, Items.DIAMOND_CHESTPLATE, "protection", 4, "thorns", 3));
+        put(handler, AnvilScreenHandler.INPUT_2_ID,
+                enchantedItem(world, Items.DIAMOND_CHESTPLATE, "fire_protection", 4, "thorns", 3));
+        handler.updateResult();
 
-    private static void assertExclusive(TestContext context, ServerWorld world,
-                                        String firstId, String secondId, boolean shouldBeExclusive, String label) {
-        Registry<Enchantment> registry = world.getRegistryManager().get(RegistryKeys.ENCHANTMENT);
-        Enchantment first = registry.get(Identifier.ofVanilla(firstId));
-        Enchantment second = registry.get(Identifier.ofVanilla(secondId));
-        if (first == null || second == null) {
-            context.assertTrue(false, label + "：附魔不存在（" + firstId + " / " + secondId + "）");
-            return;
+        ItemStack output = take(handler, AnvilScreenHandler.OUTPUT_ID);
+        context.assertTrue(!output.isEmpty(), "盔甲合并没有产出：" + describe(handler));
+        int protection = levelOf(world, output, "protection");
+        int fire = levelOf(world, output, "fire_protection");
+        context.assertTrue(protection == 4 && fire == 4,
+                "保护与火焰保护现在应当能共存，实际 保护=" + protection + " 火焰保护=" + fire);
+        context.complete();
+    }
+
+    /** 工具：时运 + 精准采集 现在应该能共存 */
+    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+    public void miningEnchantmentsNowCombine(TestContext context) {
+        ServerWorld world = context.getWorld();
+        AnvilScreenHandler handler = newAnvil(context);
+        put(handler, AnvilScreenHandler.INPUT_1_ID,
+                enchantedItem(world, Items.DIAMOND_PICKAXE, "fortune", 3, "efficiency", 5));
+        put(handler, AnvilScreenHandler.INPUT_2_ID,
+                enchantedItem(world, Items.DIAMOND_PICKAXE, "silk_touch", 1, "efficiency", 5));
+        handler.updateResult();
+
+        ItemStack output = take(handler, AnvilScreenHandler.OUTPUT_ID);
+        context.assertTrue(!output.isEmpty(), "镐合并没有产出：" + describe(handler));
+        int fortune = levelOf(world, output, "fortune");
+        int silk = levelOf(world, output, "silk_touch");
+        context.assertTrue(fortune == 3 && silk == 1,
+                "时运与精准采集现在应当能共存，实际 时运=" + fortune + " 精准采集=" + silk);
+        context.complete();
+    }
+
+    // ---------------------------------------------------------- 互斥：该保留的仍在
+
+    /** 靴子：冰霜行者与深海探索者仍然互斥（需求要求保留） */
+    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+    public void bootsWalkersStayExclusive(TestContext context) {
+        ServerWorld world = context.getWorld();
+        AnvilScreenHandler handler = newAnvil(context);
+        // 带一个能正常合并的附魔（保护 IV+IV→V），保证铁砧一定有产出
+        put(handler, AnvilScreenHandler.INPUT_1_ID,
+                enchantedItem(world, Items.DIAMOND_BOOTS, "frost_walker", 2, "protection", 4));
+        put(handler, AnvilScreenHandler.INPUT_2_ID,
+                enchantedItem(world, Items.DIAMOND_BOOTS, "depth_strider", 3, "protection", 4));
+        handler.updateResult();
+
+        ItemStack output = take(handler, AnvilScreenHandler.OUTPUT_ID);
+        context.assertTrue(!output.isEmpty(), "靴子合并没有产出：" + describe(handler));
+        int frost = levelOf(world, output, "frost_walker");
+        int depth = levelOf(world, output, "depth_strider");
+        context.assertTrue(frost > 0 && depth == 0,
+                "冰霜行者与深海探索者应当仍然互斥，实际 冰霜行者=" + frost + " 深海探索者=" + depth);
+        context.complete();
+    }
+
+    /** 三叉戟：激流与忠诚仍然互斥（需求要求保留） */
+    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+    public void tridentRiptideStaysExclusive(TestContext context) {
+        ServerWorld world = context.getWorld();
+        AnvilScreenHandler handler = newAnvil(context);
+        put(handler, AnvilScreenHandler.INPUT_1_ID,
+                enchantedItem(world, Items.TRIDENT, "riptide", 3, "unbreaking", 3));
+        put(handler, AnvilScreenHandler.INPUT_2_ID,
+                enchantedItem(world, Items.TRIDENT, "loyalty", 3, "unbreaking", 3));
+        handler.updateResult();
+
+        ItemStack output = take(handler, AnvilScreenHandler.OUTPUT_ID);
+        context.assertTrue(!output.isEmpty(), "三叉戟合并没有产出：" + describe(handler));
+        int riptide = levelOf(world, output, "riptide");
+        int loyalty = levelOf(world, output, "loyalty");
+        context.assertTrue(riptide > 0 && loyalty == 0,
+                "激流与忠诚应当仍然互斥，实际 激流=" + riptide + " 忠诚=" + loyalty);
+        context.complete();
+    }
+
+    // ---------------------------------------------------------- 下界之星
+
+    /** 星槽存在、没星取不出来、放星后能取、取出后星被消耗、经验不受影响 */
+    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+    public void netherStarSlotGatesAndIsConsumed(TestContext context) {
+        PlayerEntity player = context.createMockCreativeServerPlayerInWorld();
+        AnvilScreenHandler handler = new AnvilScreenHandler(999, player.getInventory(), ScreenHandlerContext.EMPTY);
+
+        NetherStarSlot starSlot = findStarSlot(handler);
+        context.assertTrue(starSlot != null, "铁砧界面里没有找到下界之星槽位");
+        context.assertTrue(starSlot.canInsert(new ItemStack(Items.NETHER_STAR)), "星槽应当接受下界之星");
+        context.assertFalse(starSlot.canInsert(new ItemStack(Items.DIAMOND)), "星槽不该接受钻石");
+
+        put(handler, AnvilScreenHandler.INPUT_1_ID, enchanted(context.getWorld(), Items.DIAMOND_SWORD, "sharpness", 5));
+        put(handler, AnvilScreenHandler.INPUT_2_ID, enchanted(context.getWorld(), Items.DIAMOND_SWORD, "sharpness", 5));
+        handler.updateResult();
+        ItemStack output = take(handler, AnvilScreenHandler.OUTPUT_ID);
+        context.assertTrue(!output.isEmpty(), "铁砧没有产出：" + describe(handler));
+
+        AnvilScreenHandlerInvoker invoker = (AnvilScreenHandlerInvoker) handler;
+        context.assertFalse(invoker.anvil_unbound$invokeCanTakeOutput(player, false),
+                "星槽为空时不该能取出结果");
+
+        starSlot.setStack(new ItemStack(Items.NETHER_STAR));
+        context.assertTrue(invoker.anvil_unbound$invokeCanTakeOutput(player, false),
+                "放下下界之星后应当可以取出结果");
+
+        int experienceBefore = player.experienceLevel;
+        handler.getSlot(AnvilScreenHandler.OUTPUT_ID).onTakeItem(player, output);
+        context.assertTrue(starSlot.getStack().isEmpty(), "取出结果后下界之星应当被消耗掉");
+        context.assertTrue(player.experienceLevel == experienceBefore,
+                "取出结果不该消耗经验，经验从 " + experienceBefore + " 变成了 " + player.experienceLevel);
+        context.complete();
+    }
+
+    // ---------------------------------------------------------- 辅助方法
+
+    private static NetherStarSlot findStarSlot(AnvilScreenHandler handler) {
+        for (Slot slot : handler.slots) {
+            if (slot instanceof NetherStarSlot star) {
+                return star;
+            }
         }
-        RegistryEntry<Enchantment> a = registry.getEntry(first);
-        RegistryEntry<Enchantment> b = registry.getEntry(second);
-        boolean exclusive = !Enchantment.canBeCombined(a, b);
-        context.assertTrue(exclusive == shouldBeExclusive,
-                label + " 期望" + (shouldBeExclusive ? "互斥" : "可共存") + "，实际" + (exclusive ? "互斥" : "可共存"));
+        return null;
     }
 
     private static AnvilScreenHandler newAnvil(TestContext context) {

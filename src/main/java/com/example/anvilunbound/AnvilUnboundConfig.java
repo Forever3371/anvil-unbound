@@ -17,6 +17,15 @@ public final class AnvilUnboundConfig {
     /** 铁砧合并后的等级上限。原版受"每个附魔自身的最高等级"限制（锋利最高 V），这里统一放宽。 */
     public static int maxLevel = 1000;
 
+    /** 是否保留"冰霜行者 / 深海探索者"这一组的互斥（按需求保留）。 */
+    public static boolean keepBootsExclusive = true;
+
+    /** 是否保留"激流 / 忠诚 / 引雷"这一组的互斥（按需求保留）。 */
+    public static boolean keepRiptideExclusive = true;
+
+    /** 铁砧操作是否改为消耗一颗下界之星（并且完全不再消耗经验等级）。 */
+    public static boolean requireNetherStar = true;
+
     /** 是否注册 /anvilunbound selftest 自检命令。 */
     public static boolean enableSelfTestCommand = true;
 
@@ -51,6 +60,9 @@ public final class AnvilUnboundConfig {
         }
 
         maxLevel = readInt(props, "max_level", 1000, 1, 100000);
+        keepBootsExclusive = Boolean.parseBoolean(props.getProperty("keep_boots_exclusive", "true").trim());
+        keepRiptideExclusive = Boolean.parseBoolean(props.getProperty("keep_riptide_exclusive", "true").trim());
+        requireNetherStar = Boolean.parseBoolean(props.getProperty("require_nether_star", "true").trim());
         enableSelfTestCommand = Boolean.parseBoolean(props.getProperty("enable_selftest_command", "true").trim());
     }
 
@@ -77,11 +89,22 @@ public final class AnvilUnboundConfig {
         return """
                 # Anvil Unbound 配置
                 # 让铁砧合并同名附魔时可以超过原版上限：锋利 V + 锋利 V = 锋利 VI。
-                # 附魔互斥规则（锋利/亡灵杀手/节肢杀手、保护系、冰霜行者/深海探索者、激流/忠诚/引雷……）
-                # 完全保持原版，不受本模组影响。
+                # 同时解除大部分附魔互斥，并把经验花费改成下界之星。
 
                 # 铁砧合并后的等级上限（原版各附魔最高只有 I~V，默认放宽到 1000）
                 max_level=1000
+
+                # 是否保留"冰霜行者 / 深海探索者"的互斥（默认 true = 保留，这两个仍然不能共存）
+                keep_boots_exclusive=true
+
+                # 是否保留"激流 / 忠诚 / 引雷"的互斥（默认 true = 保留）
+                # 注意：忠诚与引雷本来就能共存，这一点不受影响
+                keep_riptide_exclusive=true
+
+                # 铁砧操作是否改为消耗一颗下界之星（默认 true）
+                # 打开后：不再消耗任何经验等级，每次操作消耗 1 颗下界之星；
+                #        星不够时能看到结果但取不出来。关掉则退回原版的等级花费。
+                require_nether_star=true
 
                 # 是否注册 /anvilunbound selftest 自检命令（默认 true）
                 enable_selftest_command=true

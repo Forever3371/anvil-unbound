@@ -29,7 +29,10 @@ public class AnvilUnbound implements ModInitializer {
                                     .executes(context -> AnvilUnboundSelfTest.run(context.getSource())))));
         }
 
-        LOGGER.info("[Anvil Unbound] 已加载：铁砧合并等级上限 = {}（附魔互斥规则保持原版）",
-                AnvilUnboundConfig.maxLevel);
+        LOGGER.info("[Anvil Unbound] 已加载：铁砧等级上限 {}，保留互斥组={}，花费={}",
+                AnvilUnboundConfig.maxLevel,
+                (AnvilUnboundConfig.keepBootsExclusive ? "靴子" : "无")
+                        + "/" + (AnvilUnboundConfig.keepRiptideExclusive ? "三叉戟" : "无"),
+                AnvilUnboundConfig.requireNetherStar ? "1 颗下界之星（不再消耗经验）" : "原版经验等级");
     }
 }

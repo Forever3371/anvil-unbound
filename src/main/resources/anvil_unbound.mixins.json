@@ -5,12 +5,16 @@
   "compatibilityLevel": "JAVA_21",
   "plugin": "com.example.anvilunbound.mixin.AnvilUnboundMixinPlugin",
   "mixins": [
+    "AnvilScreenHandlerInvoker",
     "AnvilScreenHandlerMixin",
     "EnchantmentLevelCapBuilderMixin",
     "EnchantmentLevelCapCodecMixin",
-    "EnchantmentLevelCapInitMixin"
+    "EnchantmentLevelCapInitMixin",
+    "ScreenHandlerInvoker"
   ],
-  "client": [],
+  "client": [
+    "AnvilScreenMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }
