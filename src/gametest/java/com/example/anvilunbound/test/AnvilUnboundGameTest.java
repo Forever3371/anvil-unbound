@@ -217,6 +217,12 @@ public class AnvilUnboundGameTest implements FabricGameTest {
         context.assertTrue(starSlot != null, "铁砧界面里没有找到下界之星槽位");
         context.assertTrue(starSlot.canInsert(new ItemStack(Items.NETHER_STAR)), "星槽应当接受下界之星");
         context.assertFalse(starSlot.canInsert(new ItemStack(Items.DIAMOND)), "星槽不该接受钻石");
+        context.assertTrue(starSlot.getMaxItemCount() >= 64,
+                "星槽应当能放一整组（64），实际上限 " + starSlot.getMaxItemCount());
+        starSlot.setStack(new ItemStack(Items.NETHER_STAR, 64));
+        context.assertTrue(starSlot.getStack().getCount() == 64,
+                "星槽应当容纳 64 颗，实际 " + starSlot.getStack().getCount());
+        starSlot.setStack(ItemStack.EMPTY);
 
         put(handler, AnvilScreenHandler.INPUT_1_ID, enchanted(context.getWorld(), Items.DIAMOND_SWORD, "sharpness", 5));
         put(handler, AnvilScreenHandler.INPUT_2_ID, enchanted(context.getWorld(), Items.DIAMOND_SWORD, "sharpness", 5));
@@ -241,6 +247,36 @@ public class AnvilUnboundGameTest implements FabricGameTest {
     }
 
     // ---------------------------------------------------------- 辅助方法
+
+    /** 关闭界面时星槽里的下界之星必须还给玩家——原版不会返还这个自建 inventory，漏了就是吞物品。 */
+    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+    public void closingAnvilReturnsNetherStars(TestContext context) {
+        ServerPlayerEntity player = context.createMockCreativeServerPlayerInWorld();
+        AnvilScreenHandler handler = new AnvilScreenHandler(999, player.getInventory(), ScreenHandlerContext.EMPTY);
+        NetherStarSlot starSlot = findStarSlot(handler);
+        context.assertTrue(starSlot != null, "铁砧界面里没有找到下界之星槽位");
+
+        starSlot.setStack(new ItemStack(Items.NETHER_STAR, 5));
+        int before = countNetherStars(player);
+        handler.onClosed(player);
+        int after = countNetherStars(player);
+
+        context.assertTrue(starSlot.getStack().isEmpty(), "关闭界面后星槽应当被清空");
+        context.assertTrue(after == before + 5,
+                "关闭界面后应当收回 5 颗下界之星，实际收回 " + (after - before) + " 颗");
+        context.complete();
+    }
+
+    private static int countNetherStars(PlayerEntity player) {
+        int count = 0;
+        for (int i = 0; i < player.getInventory().size(); i++) {
+            ItemStack stack = player.getInventory().getStack(i);
+            if (stack.isOf(Items.NETHER_STAR)) {
+                count += stack.getCount();
+            }
+        }
+        return count;
+    }
 
     private static NetherStarSlot findStarSlot(AnvilScreenHandler handler) {
         for (Slot slot : handler.slots) {

@@ -10,10 +10,12 @@
     "EnchantmentLevelCapBuilderMixin",
     "EnchantmentLevelCapCodecMixin",
     "EnchantmentLevelCapInitMixin",
+    "ForgingScreenHandlerMixin",
     "ScreenHandlerInvoker"
   ],
   "client": [
-    "AnvilScreenMixin"
+    "AnvilScreenMixin",
+    "HandledScreenAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

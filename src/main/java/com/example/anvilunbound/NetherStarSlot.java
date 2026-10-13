@@ -11,6 +11,8 @@ import net.minecraft.screen.slot.Slot;
  * <p>
  * 做成独立的 Slot 子类，客户端渲染时就能靠 {@code instanceof NetherStarSlot} 精确找到它，
  * 不必假设它的索引（万一有其它模组也往铁砧界面加槽位，按索引找就会找错）。
+ * <p>
+ * 只限制"能放进去的物品种类"，容量就是普通的一组（64）。
  */
 public class NetherStarSlot extends Slot {
 
@@ -21,12 +23,6 @@ public class NetherStarSlot extends Slot {
     @Override
     public boolean canInsert(ItemStack stack) {
         return stack.isOf(Items.NETHER_STAR);
-    }
-
-    /** 一个槽只放一颗，够用又不会误吞玩家成组的星。 */
-    @Override
-    public int getMaxItemCount() {
-        return 1;
     }
 
     @Override
