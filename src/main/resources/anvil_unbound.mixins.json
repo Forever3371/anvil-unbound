@@ -15,7 +15,8 @@
   ],
   "client": [
     "AnvilScreenMixin",
-    "HandledScreenAccessor"
+    "HandledScreenAccessor",
+    "JeiAnvilRecipeCategoryMixin"
   ],
   "injectors": {
     "defaultRequire": 1

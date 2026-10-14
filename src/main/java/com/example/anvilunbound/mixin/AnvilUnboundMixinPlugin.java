@@ -11,14 +11,15 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 让本模组能和 Blast Enchant（同样放宽了附魔等级上限的模组）共存。
- * <p>
- * 附魔等级的 255 上限在 1.21.1 里有三处硬编码，任何想超过 255 级的模组都必须全部绕过。
- * 两个模组各自往同一处注入会直接冲突（Critical injection failure），所以这里做个让位：
- * 只要检测到 blast_enchant 已加载，就跳过本模组自带的三个等级上限 Mixin——
- * 它的上限是 100000，比我们需要的 1000 更宽松，功能上完全够用。
- * <p>
- * 单独运行本模组时这三个 Mixin 正常生效，不依赖任何其他模组。
+ * 本模组的 Mixin 配置插件，负责两件事：
+ * <ol>
+ *     <li><b>和 Blast Enchant 共存</b>：附魔等级的 255 上限在 1.21.1 里有三处硬编码，
+ *         任何想超过 255 级的模组都必须全部绕过。两个模组各自往同一处注入会直接冲突
+ *         （Critical injection failure），所以只要检测到 blast_enchant 已加载，
+ *         就跳过本模组自带的三个等级上限 Mixin——它的上限是 100000，比我们需要的 1000 更宽松。
+ *         单独运行本模组时这三个 Mixin 正常生效，不依赖任何其他模组。</li>
+ *     <li><b>JEI 适配按需生效</b>：没装 JEI 时不加载对应的 Mixin，避免碰一个根本不存在的类。</li>
+ * </ol>
  */
 public class AnvilUnboundMixinPlugin implements IMixinConfigPlugin {
 
@@ -35,12 +36,20 @@ public class AnvilUnboundMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        String simpleName = mixinClassName.substring(mixinClassName.lastIndexOf('.') + 1);
+
         if (mixinClassName.contains("EnchantmentLevelCap")
                 && FabricLoader.getInstance().isModLoaded("blast_enchant")) {
             LOGGER.info("[Anvil Unbound] 检测到 Blast Enchant 已放宽附魔等级上限，跳过 {} 避免注入冲突",
-                    mixinClassName.substring(mixinClassName.lastIndexOf('.') + 1));
+                    simpleName);
             return false;
         }
+
+        // JEI 适配：没装 JEI 就别去碰 mezz.jei.* 的类
+        if (mixinClassName.contains("Jei") && !FabricLoader.getInstance().isModLoaded("jei")) {
+            return false;
+        }
+
         return true;
     }
 

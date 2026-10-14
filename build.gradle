@@ -12,6 +12,19 @@ base {
 
 repositories {
     mavenCentral()
+    // JEI 的发布仓库。这里只用于编译期引用它的类（compileOnly），
+    // 玩家不需要安装它；没装 JEI 时对应的 Mixin 会被 MixinConfigPlugin 直接跳过。
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "BlameJared"
+                url = "https://maven.blamejared.com"
+            }
+        }
+        filter {
+            includeGroup "mezz.jei"
+        }
+    }
 }
 
 dependencies {
@@ -19,6 +32,14 @@ dependencies {
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // JEI 只是"可能装了"的第三方模组：用 compileOnly 让 Mixin 注解处理器能解析目标类，
+    // 既不会打进我们的 jar，也不会变成玩家必须安装的依赖。
+    // transitive = false：我们只引用 JEI 自己的类，它的传递依赖（mezz_config 等）在别的仓库，
+    // 没必要为了编译去拉一整条依赖链。
+    compileOnly("mezz.jei:jei-${project.minecraft_version}-fabric:${project.jei_version}") {
+        transitive = false
+    }
 }
 
 processResources {
