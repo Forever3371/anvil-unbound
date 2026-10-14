@@ -248,6 +248,33 @@ public class AnvilUnboundGameTest implements FabricGameTest {
 
     // ---------------------------------------------------------- 辅助方法
 
+    /** shift 点击（快速移动）应当把背包里的下界之星自动填进星槽。 */
+    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+    public void quickMoveFillsNetherStarSlot(TestContext context) {
+        ServerPlayerEntity player = context.createMockCreativeServerPlayerInWorld();
+        AnvilScreenHandler handler = new AnvilScreenHandler(999, player.getInventory(), ScreenHandlerContext.EMPTY);
+        NetherStarSlot starSlot = findStarSlot(handler);
+        context.assertTrue(starSlot != null, "铁砧界面里没有找到下界之星槽位");
+
+        player.getInventory().setStack(0, new ItemStack(Items.NETHER_STAR, 10));
+        int playerSlotId = -1;
+        for (Slot slot : handler.slots) {
+            if (slot.inventory == player.getInventory() && slot.getIndex() == 0) {
+                playerSlotId = slot.id;
+                break;
+            }
+        }
+        context.assertTrue(playerSlotId >= 0, "没找到玩家背包槽在界面里的索引");
+
+        handler.quickMove(player, playerSlotId);
+
+        context.assertTrue(starSlot.getStack().getCount() == 10,
+                "shift 点击应当把 10 颗下界之星填进星槽，实际只有 " + starSlot.getStack().getCount() + " 颗");
+        context.assertTrue(player.getInventory().getStack(0).isEmpty(),
+                "背包里的星应当被移走，结果还剩 " + player.getInventory().getStack(0).getCount() + " 颗");
+        context.complete();
+    }
+
     /** 关闭界面时星槽里的下界之星必须还给玩家——原版不会返还这个自建 inventory，漏了就是吞物品。 */
     @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
     public void closingAnvilReturnsNetherStars(TestContext context) {
